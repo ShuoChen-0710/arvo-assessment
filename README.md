@@ -2,7 +2,7 @@
 **Arvo AutoDeploy** – Natural‑Language to Cloud in One Command
 
 ### Demo
-- 60‑second Loom walkthrough (script below).
+- 60‑second video.
 
 ### How it works
 1. Parse your instruction, clone/unzip the repo.
