@@ -1,2 +1,5 @@
-typer>=0.12.3
-pydantic>=2.8.2
+typer==0.12.*
+fastapi==0.115.*
+uvicorn==0.30.*
+GitPython==3.1.*
+Jinja2==3.1.*

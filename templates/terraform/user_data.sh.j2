@@ -1,0 +1,46 @@
+#!/bin/bash
+set -euxo pipefail
+exec > /var/log/user-data.log 2>&1
+
+# base deps
+apt-get update
+apt-get install -y git curl unzip python3 python3-pip python3-venv docker.io
+systemctl enable --now docker || true
+
+# checkout app
+mkdir -p /opt/app && cd /opt/app
+# If you passed a repo, it will have been cloned into an AMI baked image; here we assume no secrets.
+# For simplicity, copy files baked by render (if any)
+
+# build & run
+{% if plan.use_docker %}
+# Docker path
+if [ -f Dockerfile ]; then
+  docker build -t app .
+  docker run -d --restart unless-stopped -p 80:80 -p 80:3000 -p 80:8080 app || docker run -d --restart unless-stopped -p 80:80 app
+fi
+{% else %}
+# Native path (Python/Node)
+if [ -f requirements.txt ]; then
+  python3 -m venv .venv && . .venv/bin/activate
+  pip install --no-input --upgrade pip
+  pip install -r requirements.txt || true
+  pip install gunicorn uvicorn || true
+  # Try common Flask/FastAPI/Django commands
+  (gunicorn -b 0.0.0.0:80 app:app &) || \
+  (uvicorn app:app --host 0.0.0.0 --port 80 &)
+fi
+if [ -f package.json ]; then
+  curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+  apt-get install -y nodejs
+  npm install --omit=dev || true
+  (npm run start &) || (node server.js &) || (node app.js &)
+fi
+{% endif %}
+
+# simple health page if nothing started
+sleep 10
+if ! lsof -i:80; then
+  echo "<h1>Autodeploy VM up, but service not bound to :80</h1>" > /var/www/html/index.html
+  apt-get install -y nginx && systemctl enable --now nginx
+fi
